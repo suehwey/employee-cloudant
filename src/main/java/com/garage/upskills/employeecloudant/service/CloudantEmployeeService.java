@@ -9,19 +9,20 @@ import com.cloudant.client.org.lightcouch.NoDocumentException;
 import com.garage.upskills.employeecloudant.domain.Employee;
 import com.garage.upskills.employeecloudant.exceptions.BadEmployeeDataException;
 import com.garage.upskills.employeecloudant.exceptions.EmployeeNotFoundException;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Service
 public class CloudantEmployeeService {
 
+    @Autowired
     private CloudantClient client;
-    private Database db;
 
-    public CloudantEmployeeService(CloudantClient client, Database db) {
-        this.client = client;
-        this.db = db;
-    }
+    @Autowired
+    private Database db;
 
     public List<String> getAllDB() {
         return client.getAllDbs();

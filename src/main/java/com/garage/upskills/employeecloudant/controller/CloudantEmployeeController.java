@@ -5,7 +5,6 @@ import com.garage.upskills.employeecloudant.service.CloudantEmployeeService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import javax.annotation.PostConstruct;
 import java.util.List;
 
 @RestController
