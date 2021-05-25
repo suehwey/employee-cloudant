@@ -4,8 +4,9 @@ import com.cloudant.client.api.model.Document;
 import lombok.Data;
 
 @Data
-public class Employee extends Document {
+public class CloudantEmployee extends Document {
 
+    private String employeeId;
     private String firstName;
     private String lastName;
     private String role;

@@ -6,7 +6,7 @@ import com.cloudant.client.api.model.Response;
 import com.cloudant.client.api.query.Expression;
 import com.cloudant.client.api.query.QueryBuilder;
 import com.cloudant.client.org.lightcouch.NoDocumentException;
-import com.garage.upskills.employeecloudant.domain.Employee;
+import com.garage.upskills.employeecloudant.domain.CloudantEmployee;
 import com.garage.upskills.employeecloudant.exceptions.BadEmployeeDataException;
 import com.garage.upskills.employeecloudant.exceptions.EmployeeNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,9 +28,9 @@ public class CloudantEmployeeService {
         return client.getAllDbs();
     }
 
-    public List<Employee> getEmployees() {
+    public List<CloudantEmployee> getEmployees() {
         try {
-            List<Employee> employeeList = db.getAllDocsRequestBuilder().includeDocs(true).build().getResponse().getDocsAs(Employee.class);
+            List<CloudantEmployee> employeeList = db.getAllDocsRequestBuilder().includeDocs(true).build().getResponse().getDocsAs(CloudantEmployee.class);
             return employeeList;
         } catch (Exception e) {
             throw new EmployeeNotFoundException("No Employee Data");
@@ -38,16 +38,25 @@ public class CloudantEmployeeService {
 
     }
 
-    public Employee getEmployeeById(String id) {
+    public CloudantEmployee getEmployeeById(String id) {
         try {
-            return db.find(Employee.class, id);
+            return db.find(CloudantEmployee.class, id);
         } catch (NoDocumentException e) {
             throw new EmployeeNotFoundException("Employee ID: " + id + " doesn't exist.");
         }
     }
 
-    public List<Employee> getEmployeeByRole(String role) {
-        List<Employee> employeeList = queryByField("role", role);
+    public List<CloudantEmployee> getEmployeeByEmpId(String id) {
+        List<CloudantEmployee> employeeList = queryByField("employeeId", id);
+
+        if (employeeList.size() == 0)
+            throw new EmployeeNotFoundException("No Employee of employee ID - " + id);
+
+        return employeeList;
+    }
+
+    public List<CloudantEmployee> getEmployeeByRole(String role) {
+        List<CloudantEmployee> employeeList = queryByField("role", role);
 
         if (employeeList.size() == 0)
             throw new EmployeeNotFoundException("No Employee of role - " + role);
@@ -55,8 +64,8 @@ public class CloudantEmployeeService {
         return employeeList;
     }
 
-    public List<Employee> getEmployeeByCity(String city) {
-        List<Employee> employeeList = queryByField("city", city);
+    public List<CloudantEmployee> getEmployeeByCity(String city) {
+        List<CloudantEmployee> employeeList = queryByField("city", city);
 
         if (employeeList.size() == 0)
             throw new EmployeeNotFoundException("No Employee lives in city - " + city);
@@ -64,43 +73,64 @@ public class CloudantEmployeeService {
         return employeeList;
     }
 
-    public Employee saveEmployee(Employee employee) {
-        Response response = db.save(employee);
-        return db.find(Employee.class, response.getId());
+    public CloudantEmployee saveEmployee(CloudantEmployee employee) {
+        Response response = db.save(validateEmployee(employee));
+        return db.find(CloudantEmployee.class, response.getId());
     }
 
-    public List<Employee> saveEmployees(List<Employee> employees) {
-        List<Response> responseList = db.bulk(employees);
+    public List<CloudantEmployee> saveEmployees(List<CloudantEmployee> employees) {
+//        List<Response> responseList = db.bulk(employees);
+//        return responseList.stream()
+//                .map(response -> db.find(CloudantEmployee.class, response.getId()))
+//                .collect(Collectors.toList())
+//                ;
 
-        return responseList.stream()
-                .map(response -> db.find(Employee.class, response.getId()))
-                .collect(Collectors.toList())
-                ;
+        // call addEmployee to do data checking
+        return employees.stream()
+                .map(employee -> this.saveEmployee(employee))
+                .collect(Collectors.toList());
     }
 
     public String deleteEmployeeById(String id) {
-        Employee employee = this.getEmployeeById(id);  // will throw exception if employee id doesn't exist
+        CloudantEmployee employee = this.getEmployeeById(id);  // will throw exception if employee id doesn't exist
 
         db.remove(employee);
         return employee + " has been deleted.";
     }
 
-    public String updateEmployee(Employee employee) throws EmployeeNotFoundException{
+//    public String updateEmployee(CloudantEmployee employee) throws EmployeeNotFoundException{
+//        String empId = employee.getId();
+//        String firstName = employee.getFirstName();
+//        String lastName = employee.getLastName();
+//
+//        this.getEmployeeById(empId);
+//        if (firstName == null || lastName == null || firstName.length() == 0 || lastName.length() == 0)
+//            throw new BadEmployeeDataException("Employee First Name and Last Name can't be null.\n" + employee);
+//
+//        db.update(employee);
+//        return "Employee ID: " + empId + " has been updated:\n" + employee;
+//    }
+
+    public String updateEmployee(CloudantEmployee employee) {
+        this.getEmployeeById(employee.getId());
+        db.update(validateEmployee(employee));
+        return "Employee ID: " + employee.getId() + " has been updated:\n" + employee;
+    }
+
+    public CloudantEmployee validateEmployee(CloudantEmployee employee) throws BadEmployeeDataException {
         String empId = employee.getId();
         String firstName = employee.getFirstName();
         String lastName = employee.getLastName();
 
-        this.getEmployeeById(empId);
         if (firstName == null || lastName == null || firstName.length() == 0 || lastName.length() == 0)
             throw new BadEmployeeDataException("Employee First Name and Last Name can't be null.\n" + employee);
 
-        db.update(employee);
-        return "Employee ID: " + empId + " has been updated:\n" + employee;
+        return employee;
     }
 
-    private List<Employee> queryByField(String field, String value) {
+    private List<CloudantEmployee> queryByField(String field, String value) {
         String query = new QueryBuilder(Expression.eq(field, value)).build();
-        return db.query(query, Employee.class).getDocs();
+        return db.query(query, CloudantEmployee.class).getDocs();
     }
 
 }
